@@ -1,0 +1,6 @@
+@TextSubmissionAPI_HostAddress = http://localhost:5010
+
+GET {{TextSubmissionAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

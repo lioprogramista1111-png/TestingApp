@@ -1,0 +1,49 @@
+<div class="form-container">
+  <h1>Text Submission Form</h1>
+
+  <form [formGroup]="textForm" (ngSubmit)="onSubmit()" class="submission-form">
+    <div class="form-group">
+      <label for="text">Enter your text:</label>
+      <textarea
+        id="text"
+        formControlName="text"
+        placeholder="Type your text here..."
+        rows="5"
+        class="form-control"
+        [class.error]="textControl?.invalid && textControl?.touched">
+      </textarea>
+
+      @if (textControl?.invalid && textControl?.touched) {
+        <div class="validation-messages">
+          @if (textControl?.errors?.['required']) {
+            <div class="error-message">
+              Text is required.
+            </div>
+          }
+          @if (textControl?.errors?.['maxlength']) {
+            <div class="error-message">
+              Text cannot exceed 1000 characters.
+            </div>
+          }
+        </div>
+      }
+
+      <div class="character-count">
+        {{ textControl?.value?.length || 0 }}/1000 characters
+      </div>
+    </div>
+
+    <button
+      type="submit"
+      class="submit-btn"
+      [disabled]="textForm.invalid || isSubmitting()">
+      {{ isSubmitting() ? 'Submitting...' : 'Submit' }}
+    </button>
+  </form>
+
+  @if (submitMessage()) {
+    <div class="message" [class.success]="submitSuccess()" [class.error]="!submitSuccess()">
+      {{ submitMessage() }}
+    </div>
+  }
+</div>
