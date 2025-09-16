@@ -1,0 +1,20 @@
+{
+  "scripts": {
+    "test": "ng test",
+    "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
+    "test:coverage": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
+    "test:watch": "ng test --watch=true",
+    "test:debug": "ng test --browsers=Chrome",
+    "test:component": "ng test --include='**/components/**/*.spec.ts'",
+    "test:service": "ng test --include='**/services/**/*.spec.ts'"
+  },
+  "description": {
+    "test": "Run tests in watch mode",
+    "test:ci": "Run tests once for CI/CD",
+    "test:coverage": "Run tests with coverage report",
+    "test:watch": "Run tests in watch mode (explicit)",
+    "test:debug": "Run tests in Chrome for debugging",
+    "test:component": "Run only component tests",
+    "test:service": "Run only service tests"
+  }
+}
