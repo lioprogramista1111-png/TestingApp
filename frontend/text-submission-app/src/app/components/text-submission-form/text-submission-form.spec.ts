@@ -51,12 +51,12 @@ describe('TextSubmissionForm', () => {
 
   it('should validate max length', () => {
     const textControl = component.textForm.get('text');
-    const longText = 'a'.repeat(1001); // 1001 characters
+    const longText = 'a'.repeat(51); // 51 characters
 
     textControl?.setValue(longText);
     expect(textControl?.hasError('maxlength')).toBeTruthy();
 
-    const validText = 'a'.repeat(1000); // 1000 characters
+    const validText = 'a'.repeat(50); // 50 characters
     textControl?.setValue(validText);
     expect(textControl?.hasError('maxlength')).toBeFalsy();
   });
@@ -78,7 +78,17 @@ describe('TextSubmissionForm', () => {
     fixture.detectChanges();
 
     const characterCount = fixture.nativeElement.querySelector('.character-count');
-    expect(characterCount.textContent.trim()).toBe('11/1000 characters');
+    expect(characterCount.textContent.trim()).toBe('11/50 characters');
+  });
+
+  it('should have maxlength attribute set to 50 on input field', () => {
+    const inputElement = fixture.nativeElement.querySelector('input[type="text"]');
+    expect(inputElement.getAttribute('maxlength')).toBe('50');
+  });
+
+  it('should have maxlength attribute set to 50', () => {
+    const textarea = fixture.nativeElement.querySelector('textarea');
+    expect(textarea.getAttribute('maxlength')).toBe('50');
   });
 
   it('should disable submit button when form is invalid', () => {

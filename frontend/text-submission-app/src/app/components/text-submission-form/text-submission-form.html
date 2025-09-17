@@ -4,14 +4,14 @@
   <form [formGroup]="textForm" (ngSubmit)="onSubmit()" class="submission-form">
     <div class="form-group">
       <label for="text">Enter your text:</label>
-      <textarea
+      <input
+        type="text"
         id="text"
         formControlName="text"
         placeholder="Type your text here..."
-        rows="5"
+        maxlength="50"
         class="form-control"
-        [class.error]="textControl?.invalid && textControl?.touched">
-      </textarea>
+        [class.error]="textControl?.invalid && textControl?.touched" />
 
       @if (textControl?.invalid && textControl?.touched) {
         <div class="validation-messages">
@@ -22,14 +22,14 @@
           }
           @if (textControl?.errors?.['maxlength']) {
             <div class="error-message">
-              Text cannot exceed 1000 characters.
+              Text cannot exceed 50 characters.
             </div>
           }
         </div>
       }
 
       <div class="character-count">
-        {{ textControl?.value?.length || 0 }}/1000 characters
+        {{ textControl?.value?.length || 0 }}/50 characters
       </div>
     </div>
 
