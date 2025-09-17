@@ -20,7 +20,7 @@ export class TextSubmissionForm {
     private textSubmissionService: TextSubmissionService
   ) {
     this.textForm = this.fb.group({
-      text: ['', [Validators.required, Validators.maxLength(50)]]
+      text: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(50)]]
     });
   }
 

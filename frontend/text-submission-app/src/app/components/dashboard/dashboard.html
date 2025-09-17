@@ -1,0 +1,109 @@
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h2>Submitted Entries</h2>
+    <button
+      class="refresh-btn"
+      (click)="refreshSubmissions()"
+      [disabled]="isLoading()">
+      {{ isLoading() ? 'Loading...' : 'Refresh' }}
+    </button>
+  </div>
+
+  @if (isLoading()) {
+    <div class="loading-message">
+      <p>Loading submissions...</p>
+    </div>
+  }
+
+  @if (errorMessage()) {
+    <div class="error-message">
+      <p>{{ errorMessage() }}</p>
+      <button class="retry-btn" (click)="refreshSubmissions()">Try Again</button>
+    </div>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    @if (submissions().length === 0) {
+      <div class="no-data-message">
+        <p>No text submissions found.</p>
+        <p>Submit some text using the form to see entries here.</p>
+      </div>
+    } @else {
+      <div class="submissions-stats">
+        <p>Total Submissions: <strong>{{ submissions().length }}</strong></p>
+      </div>
+
+      <div class="submissions-table-container">
+        <table class="submissions-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Text Content</th>
+              <th>Characters</th>
+              <th>Date Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (submission of submissions(); track submission.id) {
+              <tr class="submission-row">
+                <td class="id-cell">{{ submission.id }}</td>
+                <td class="content-cell">
+                  @if (editingId() === submission.id) {
+                    <div class="edit-form">
+                      <textarea
+                        [(ngModel)]="editText"
+                        class="edit-textarea"
+                        maxlength="50"
+                        placeholder="Edit your text here...">
+                      </textarea>
+                      <div class="character-count-edit">
+                        {{ editText().length }}/50 characters
+                      </div>
+                    </div>
+                  } @else {
+                    <span class="text-content">{{ submission.text }}</span>
+                  }
+                </td>
+                <td class="character-cell">{{ submission.text.length }}</td>
+                <td class="date-cell">{{ formatDate(submission.createdAt) }}</td>
+                <td class="actions-cell">
+                  @if (editingId() === submission.id) {
+                    <div class="edit-actions">
+                      <button
+                        class="save-btn"
+                        (click)="saveEdit(submission.id)"
+                        [disabled]="editText().length < 10 || editText().length > 50">
+                        Save
+                      </button>
+                      <button
+                        class="cancel-btn"
+                        (click)="cancelEdit()">
+                        Cancel
+                      </button>
+                    </div>
+                  } @else {
+                    <div class="action-buttons">
+                      <button
+                        class="edit-btn"
+                        (click)="startEdit(submission)"
+                        title="Edit this submission">
+                        Edit
+                      </button>
+                      <button
+                        class="delete-btn"
+                        (click)="deleteSubmission(submission.id, submission.text)"
+                        title="Delete this submission">
+                        Delete
+                      </button>
+                    </div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>

@@ -27,4 +27,12 @@ export class TextSubmissionService {
   getSubmissions(): Observable<TextSubmissionModel[]> {
     return this.http.get<TextSubmissionModel[]>(this.apiUrl);
   }
+
+  updateSubmission(id: number, request: TextSubmissionRequest): Observable<TextSubmissionModel> {
+    return this.http.put<TextSubmissionModel>(`${this.apiUrl}/${id}`, request);
+  }
+
+  deleteSubmission(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
 }

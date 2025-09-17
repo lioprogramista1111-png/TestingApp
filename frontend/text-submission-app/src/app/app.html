@@ -1,1 +1,18 @@
-﻿<div class="app-container"><app-text-submission-form></app-text-submission-form></div><router-outlet></router-outlet>
+﻿<div class="app-container">
+  <div class="app-header">
+    <h1>{{ title() }}</h1>
+  </div>
+
+  <div class="app-content">
+    <!-- Text Submission Form -->
+    <div class="form-section">
+      <app-text-submission-form></app-text-submission-form>
+    </div>
+
+    <!-- Dashboard Section -->
+    <div class="dashboard-section">
+      <app-dashboard></app-dashboard>
+    </div>
+  </div>
+</div>
+<router-outlet></router-outlet>

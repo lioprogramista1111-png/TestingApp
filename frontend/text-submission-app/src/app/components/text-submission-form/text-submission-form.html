@@ -20,6 +20,11 @@
               Text is required.
             </div>
           }
+          @if (textControl?.errors?.['minlength']) {
+            <div class="error-message">
+              Text must be at least 10 characters.
+            </div>
+          }
           @if (textControl?.errors?.['maxlength']) {
             <div class="error-message">
               Text cannot exceed 50 characters.
