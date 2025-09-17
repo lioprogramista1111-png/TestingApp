@@ -3,6 +3,18 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TextSubmissionService, TextSubmissionModel } from '../../services/text-submission';
 
+// Constants for validation
+const TEXT_MIN_LENGTH = 10;
+const TEXT_MAX_LENGTH = 50;
+
+// Error messages
+const ERROR_MESSAGES = {
+  LOAD_FAILED: 'Failed to load submissions. Please try again.',
+  UPDATE_FAILED: 'Failed to update submission. Please try again.',
+  DELETE_FAILED: 'Failed to delete submission. Please try again.',
+  INVALID_LENGTH: `Text must be between ${TEXT_MIN_LENGTH} and ${TEXT_MAX_LENGTH} characters.`
+} as const;
+
 @Component({
   selector: 'app-dashboard',
   imports: [CommonModule, FormsModule],
@@ -10,91 +22,124 @@ import { TextSubmissionService, TextSubmissionModel } from '../../services/text-
   styleUrl: './dashboard.css'
 })
 export class Dashboard implements OnInit {
-  submissions = signal<TextSubmissionModel[]>([]);
-  isLoading = signal(false);
-  errorMessage = signal('');
-  editingId = signal<number | null>(null);
-  editText = signal('');
+  // State signals
+  readonly submissions = signal<TextSubmissionModel[]>([]);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal('');
+  readonly editingId = signal<number | null>(null);
+  readonly editText = signal('');
 
-  constructor(private textSubmissionService: TextSubmissionService) {}
+  constructor(private readonly textSubmissionService: TextSubmissionService) {}
 
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadSubmissions();
   }
 
-  loadSubmissions() {
-    this.isLoading.set(true);
-    this.errorMessage.set('');
+  loadSubmissions(): void {
+    this.setLoadingState(true);
 
     this.textSubmissionService.getSubmissions().subscribe({
-      next: (data) => {
-        this.submissions.set(data);
-        this.isLoading.set(false);
+      next: (submissions) => {
+        this.submissions.set(submissions);
+        this.setLoadingState(false);
       },
       error: (error) => {
-        this.errorMessage.set('Failed to load submissions. Please try again.');
-        this.isLoading.set(false);
-        console.error('Error loading submissions:', error);
+        this.handleError(ERROR_MESSAGES.LOAD_FAILED, error);
+        this.setLoadingState(false);
       }
     });
   }
 
-  refreshSubmissions() {
+  refreshSubmissions(): void {
     this.loadSubmissions();
   }
 
   formatDate(dateString: string): string {
-    const date = new Date(dateString);
-    return date.toLocaleString();
+    return new Date(dateString).toLocaleString();
   }
 
-  startEdit(submission: TextSubmissionModel) {
+  // Helper methods
+  private setLoadingState(loading: boolean): void {
+    this.isLoading.set(loading);
+    if (loading) {
+      this.errorMessage.set('');
+    }
+  }
+
+  private handleError(message: string, error: any): void {
+    this.errorMessage.set(message);
+    console.error('Dashboard error:', error);
+  }
+
+  // Edit operations
+  startEdit(submission: TextSubmissionModel): void {
     this.editingId.set(submission.id);
     this.editText.set(submission.text);
   }
 
-  cancelEdit() {
-    this.editingId.set(null);
-    this.editText.set('');
+  cancelEdit(): void {
+    this.resetEditState();
   }
 
-  saveEdit(id: number) {
+  saveEdit(id: number): void {
     const updatedText = this.editText().trim();
 
-    if (updatedText.length < 10 || updatedText.length > 50) {
-      alert('Text must be between 10 and 50 characters.');
+    if (!this.isValidTextLength(updatedText)) {
+      alert(ERROR_MESSAGES.INVALID_LENGTH);
       return;
     }
 
     this.textSubmissionService.updateSubmission(id, { text: updatedText }).subscribe({
       next: (updatedSubmission) => {
-        const currentSubmissions = this.submissions();
-        const updatedSubmissions = currentSubmissions.map(sub =>
-          sub.id === id ? updatedSubmission : sub
-        );
-        this.submissions.set(updatedSubmissions);
-        this.cancelEdit();
+        this.updateSubmissionInList(id, updatedSubmission);
+        this.resetEditState();
       },
       error: (error) => {
         console.error('Error updating submission:', error);
-        alert('Failed to update submission. Please try again.');
+        alert(ERROR_MESSAGES.UPDATE_FAILED);
       }
     });
   }
 
-  deleteSubmission(id: number, text: string) {
-    if (confirm(`Are you sure you want to delete this submission?\n\n"${text}"`)) {
-      this.textSubmissionService.deleteSubmission(id).subscribe({
-        next: () => {
-          const currentSubmissions = this.submissions();
-          const filteredSubmissions = currentSubmissions.filter(sub => sub.id !== id);
-          this.submissions.set(filteredSubmissions);
-        },
-        error: (error) => {
-          console.error('Error deleting submission:', error);
-          alert('Failed to delete submission. Please try again.');
-        }
-      });
-    }
+  deleteSubmission(id: number, text: string): void {
+    if (!this.confirmDelete(text)) return;
+
+    this.textSubmissionService.deleteSubmission(id).subscribe({
+      next: () => {
+        this.removeSubmissionFromList(id);
+      },
+      error: (error) => {
+        console.error('Error deleting submission:', error);
+        alert(ERROR_MESSAGES.DELETE_FAILED);
+      }
+    });
+  }
+
+  // Private helper methods
+  private resetEditState(): void {
+    this.editingId.set(null);
+    this.editText.set('');
+  }
+
+  private isValidTextLength(text: string): boolean {
+    return text.length >= TEXT_MIN_LENGTH && text.length <= TEXT_MAX_LENGTH;
+  }
+
+  private confirmDelete(text: string): boolean {
+    return confirm(`Are you sure you want to delete this submission?\n\n"${text}"`);
+  }
+
+  private updateSubmissionInList(id: number, updatedSubmission: TextSubmissionModel): void {
+    const currentSubmissions = this.submissions();
+    const updatedSubmissions = currentSubmissions.map(sub =>
+      sub.id === id ? updatedSubmission : sub
+    );
+    this.submissions.set(updatedSubmissions);
+  }
+
+  private removeSubmissionFromList(id: number): void {
+    const currentSubmissions = this.submissions();
+    const filteredSubmissions = currentSubmissions.filter(sub => sub.id !== id);
+    this.submissions.set(filteredSubmissions);
   }
 }
