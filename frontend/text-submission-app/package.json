@@ -6,10 +6,10 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test --browsers=Chrome",
     "test:ci": "ng test --watch=false --browsers=ChromeHeadless",
     "test:coverage": "ng test --watch=false --browsers=ChromeHeadless --code-coverage",
-    "test:watch": "ng test --watch=true",
+    "test:watch": "ng test --watch=true --browsers=Chrome",
     "test:debug": "ng test --browsers=Chrome"
   },
   "prettier": {
