@@ -11,4 +11,16 @@ import { Dashboard } from './components/dashboard/dashboard';
 })
 export class App {
   protected readonly title = signal('Text Submission Application');
+
+  // Signal to trigger dashboard refresh when new submissions are added
+  protected readonly dashboardRefreshTrigger = signal(0);
+
+  /**
+   * Handle when a new submission is added from the form
+   * This will trigger the dashboard to refresh and show the new submission
+   */
+  onSubmissionAdded(): void {
+    // Increment the trigger to notify dashboard to refresh
+    this.dashboardRefreshTrigger.update(current => current + 1);
+  }
 }

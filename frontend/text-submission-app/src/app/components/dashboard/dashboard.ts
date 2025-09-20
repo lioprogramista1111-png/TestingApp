@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, input, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TextSubmissionService, TextSubmissionModel } from '../../services/text-submission';
@@ -22,6 +22,9 @@ const ERROR_MESSAGES = {
   styleUrl: './dashboard.css'
 })
 export class Dashboard implements OnInit {
+  // Input signal to trigger refresh when new submissions are added
+  readonly refreshTrigger = input<number>(0);
+
   // State signals
   readonly submissions = signal<TextSubmissionModel[]>([]);
   readonly isLoading = signal(false);
@@ -29,7 +32,16 @@ export class Dashboard implements OnInit {
   readonly editingId = signal<number | null>(null);
   readonly editText = signal('');
 
-  constructor(private readonly textSubmissionService: TextSubmissionService) {}
+  constructor(private readonly textSubmissionService: TextSubmissionService) {
+    // Effect to watch for refresh trigger changes
+    effect(() => {
+      const trigger = this.refreshTrigger();
+      if (trigger > 0) {
+        // Small delay to ensure the new submission is saved before refreshing
+        setTimeout(() => this.loadSubmissions(), 100);
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadSubmissions();

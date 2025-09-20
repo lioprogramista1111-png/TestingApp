@@ -6,12 +6,16 @@
   <div class="app-content">
     <!-- Text Submission Form -->
     <div class="form-section">
-      <app-text-submission-form></app-text-submission-form>
+      <app-text-submission-form
+        (submissionAdded)="onSubmissionAdded()">
+      </app-text-submission-form>
     </div>
 
     <!-- Dashboard Section -->
     <div class="dashboard-section">
-      <app-dashboard></app-dashboard>
+      <app-dashboard
+        [refreshTrigger]="dashboardRefreshTrigger()">
+      </app-dashboard>
     </div>
   </div>
 </div>

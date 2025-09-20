@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { TextSubmissionService, TextSubmissionRequest } from '../../services/text-submission';
@@ -24,6 +24,9 @@ export class TextSubmissionForm {
   readonly isSubmitting = signal(false);
   readonly submitMessage = signal('');
   readonly submitSuccess = signal(false);
+
+  // Output event to notify parent when a submission is successful
+  readonly submissionAdded = output<void>();
 
   constructor(
     private readonly fb: FormBuilder,
@@ -77,6 +80,9 @@ export class TextSubmissionForm {
     this.submitSuccess.set(true);
     this.submitMessage.set(MESSAGES.SUCCESS);
     this.textForm.reset();
+
+    // Emit event to notify parent that a new submission was added
+    this.submissionAdded.emit();
   }
 
   private handleSubmissionError(error: any): void {
