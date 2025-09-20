@@ -9,14 +9,7 @@
     </button>
   </div>
 
-  <!-- Debug Info -->
-  <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border: 1px solid #ccc;">
-    <p><strong>Debug Info:</strong></p>
-    <p>Loading: {{ isLoading() }}</p>
-    <p>Error: {{ errorMessage() }}</p>
-    <p>Submissions count: {{ submissions().length }}</p>
-    <p>Submissions data: {{ submissions() | json }}</p>
-  </div>
+
 
   @if (isLoading()) {
     <div class="loading-message">
