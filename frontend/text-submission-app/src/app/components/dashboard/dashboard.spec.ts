@@ -174,4 +174,56 @@ describe('Dashboard Component', () => {
     // Assert: Verify loadSubmissions was called
     expect(component.loadSubmissions).toHaveBeenCalled();
   });
+
+  /**
+   * Test 7: Edit Button Click Functionality (Simplified)
+   *
+   * This test verifies that the startEdit method properly
+   * activates edit mode for a submission. This is a simple
+   * component method test that validates the edit functionality.
+   */
+  it('should activate edit mode when startEdit is called', () => {
+    // Arrange: Set up test data with a mock submission
+    const mockSubmission = {
+      id: 1,
+      text: 'Test submission text',
+      createdAt: '2025-09-20T10:30:00.000Z'
+    };
+
+    // Verify initial state (not in edit mode)
+    expect(component.editingId()).toBeNull();
+    expect(component.editText()).toBe('');
+
+    // Act: Call the startEdit method (simulates clicking edit button)
+    component.startEdit(mockSubmission);
+
+    // Assert: Verify edit mode is activated
+    expect(component.editingId()).toBe(1);
+    expect(component.editText()).toBe('Test submission text');
+  });
+
+  /**
+   * Test 8: Cancel Edit Functionality
+   *
+   * This test verifies that the cancelEdit method properly
+   * deactivates edit mode and resets the edit state.
+   */
+  it('should deactivate edit mode when cancelEdit is called', () => {
+    // Arrange: Set up edit mode first
+    const mockSubmission = {
+      id: 1,
+      text: 'Test submission text',
+      createdAt: '2025-09-20T10:30:00.000Z'
+    };
+
+    component.startEdit(mockSubmission);
+    expect(component.editingId()).toBe(1); // Verify we're in edit mode
+
+    // Act: Cancel the edit
+    component.cancelEdit();
+
+    // Assert: Verify edit mode is deactivated
+    expect(component.editingId()).toBeNull();
+    expect(component.editText()).toBe('');
+  });
 });

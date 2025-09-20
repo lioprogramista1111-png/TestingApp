@@ -44,18 +44,26 @@ export class Dashboard implements OnInit {
   }
 
   ngOnInit(): void {
+    console.log('Dashboard: ngOnInit called');
     this.loadSubmissions();
   }
 
   loadSubmissions(): void {
+    console.log('Dashboard: Starting to load submissions...');
     this.setLoadingState(true);
 
     this.textSubmissionService.getSubmissions().subscribe({
       next: (submissions) => {
+        console.log('Dashboard: Received submissions:', submissions);
+        console.log('Dashboard: Submissions length:', submissions.length);
+        console.log('Dashboard: Setting submissions in signal...');
         this.submissions.set(submissions);
+        console.log('Dashboard: Current submissions signal value:', this.submissions());
         this.setLoadingState(false);
+        console.log('Dashboard: Loading state set to false');
       },
       error: (error) => {
+        console.error('Dashboard: Error loading submissions:', error);
         this.handleError(ERROR_MESSAGES.LOAD_FAILED, error);
         this.setLoadingState(false);
       }
