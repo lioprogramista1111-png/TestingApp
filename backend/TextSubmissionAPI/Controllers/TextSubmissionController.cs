@@ -82,14 +82,73 @@ namespace TextSubmissionAPI.Controllers
 
                 _logger.LogInformation("Text submission created with id {Id}", textSubmission.Id);
 
-                return CreatedAtAction(nameof(GetTextSubmission), 
-                    new { id = textSubmission.Id }, 
+                return CreatedAtAction(nameof(GetTextSubmission),
+                    new { id = textSubmission.Id },
                     textSubmission);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating text submission");
                 return StatusCode(500, new { message = "An error occurred while saving the submission" });
+            }
+        }
+
+        // PUT: api/TextSubmission/5
+        [HttpPut("{id}")]
+        public async Task<ActionResult<TextSubmission>> PutTextSubmission(int id, TextSubmissionRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var textSubmission = await _context.TextSubmissions.FindAsync(id);
+                if (textSubmission == null)
+                {
+                    return NotFound(new { message = "Text submission not found" });
+                }
+
+                textSubmission.Text = request.Text;
+
+                _context.Entry(textSubmission).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Text submission updated with id {Id}", textSubmission.Id);
+
+                return Ok(textSubmission);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating text submission with id {Id}", id);
+                return StatusCode(500, new { message = "An error occurred while updating the submission" });
+            }
+        }
+
+        // DELETE: api/TextSubmission/5
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteTextSubmission(int id)
+        {
+            try
+            {
+                var textSubmission = await _context.TextSubmissions.FindAsync(id);
+                if (textSubmission == null)
+                {
+                    return NotFound(new { message = "Text submission not found" });
+                }
+
+                _context.TextSubmissions.Remove(textSubmission);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Text submission deleted with id {Id}", id);
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting text submission with id {Id}", id);
+                return StatusCode(500, new { message = "An error occurred while deleting the submission" });
             }
         }
     }
