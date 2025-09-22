@@ -12,7 +12,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { Dashboard } from './dashboard';
-import { TextSubmissionService } from '../../services/text-submission';
+import { TextSubmissionService, TextSubmissionModel } from '../../services/text-submission';
 
 describe('Dashboard Component', () => {
   let component: Dashboard;
@@ -36,10 +36,11 @@ describe('Dashboard Component', () => {
    */
   beforeEach(async () => {
     // Create spy object with methods we want to track and control
-    mockService = jasmine.createSpyObj('TextSubmissionService', ['getSubmissions', 'deleteSubmission']);
+    mockService = jasmine.createSpyObj('TextSubmissionService', ['getSubmissions', 'updateSubmission', 'deleteSubmission']);
 
     // Configure default successful responses
     mockService.getSubmissions.and.returnValue(of([])); // Empty array for no submissions
+    mockService.updateSubmission.and.returnValue(of({} as any)); // Mock successful update
     mockService.deleteSubmission.and.returnValue(of(undefined)); // Void return for successful delete
 
     // Configure Angular testing module
@@ -256,5 +257,332 @@ describe('Dashboard Component', () => {
     // Assert: Verify edit mode is deactivated and state is reset
     expect(component.editingId()).toBeNull(); // No longer editing
     expect(component.editText()).toBe(''); // Edit text cleared
+  });
+
+  // ========================================
+  // ADDITIONAL UNIT TESTS FOR COMPREHENSIVE COVERAGE
+  // ========================================
+
+  /**
+   * Test Group: Text Validation
+   *
+   * These tests verify the text validation logic used in edit operations.
+   * The component enforces a 10-50 character limit for submissions.
+   */
+  describe('Text Validation', () => {
+    /**
+     * Test: Valid text length acceptance
+     * Verifies that text within the 10-50 character range is accepted
+     */
+    it('should accept valid text length (10-50 characters)', () => {
+      // Test minimum valid length (10 characters)
+      const validText10 = 'Valid text'; // exactly 10 characters
+      expect(component['isValidTextLength'](validText10)).toBeTruthy();
+
+      // Test maximum valid length (50 characters)
+      const validText50 = 'This is a valid text that is exactly fifty chars'; // exactly 50 characters
+      expect(component['isValidTextLength'](validText50)).toBeTruthy();
+
+      // Test middle range
+      const validText25 = 'This is valid text here'; // 23 characters
+      expect(component['isValidTextLength'](validText25)).toBeTruthy();
+    });
+
+    /**
+     * Test: Invalid text length rejection
+     * Verifies that text outside the 10-50 character range is rejected
+     */
+    it('should reject invalid text length', () => {
+      // Test too short (less than 10 characters)
+      const tooShort = 'Short'; // 5 characters
+      expect(component['isValidTextLength'](tooShort)).toBeFalsy();
+
+      // Test empty string
+      expect(component['isValidTextLength']('')).toBeFalsy();
+
+      // Test too long (more than 50 characters)
+      const tooLong = 'This text is way too long and exceeds the fifty character limit that is enforced'; // 80+ characters
+      expect(component['isValidTextLength'](tooLong)).toBeFalsy();
+    });
+  });
+
+  /**
+   * Test Group: Edit State Management
+   *
+   * These tests verify the edit state management functionality including
+   * starting edit mode, canceling edits, and resetting state.
+   */
+  describe('Edit State Management', () => {
+    /**
+     * Test: Edit state reset functionality
+     * Verifies that resetEditState properly clears all edit-related signals
+     */
+    it('should reset edit state properly', () => {
+      // Arrange: Set some edit state
+      component.editingId.set(123);
+      component.editText.set('Some edit text');
+
+      // Act: Reset the edit state
+      component['resetEditState']();
+
+      // Assert: Verify state is cleared
+      expect(component.editingId()).toBeNull();
+      expect(component.editText()).toBe('');
+    });
+
+    /**
+     * Test: Multiple edit operations
+     * Verifies that starting edit on different submissions works correctly
+     */
+    it('should handle multiple edit operations correctly', () => {
+      // Arrange: Create multiple mock submissions
+      const submission1 = { id: 1, text: 'First submission text', createdAt: '2025-09-20T10:30:00.000Z' };
+      const submission2 = { id: 2, text: 'Second submission text', createdAt: '2025-09-20T11:30:00.000Z' };
+
+      // Act & Assert: Start edit on first submission
+      component.startEdit(submission1);
+      expect(component.editingId()).toBe(1);
+      expect(component.editText()).toBe('First submission text');
+
+      // Act & Assert: Switch to editing second submission
+      component.startEdit(submission2);
+      expect(component.editingId()).toBe(2);
+      expect(component.editText()).toBe('Second submission text');
+    });
+  });
+
+  /**
+   * Test Group: Error Handling
+   *
+   * These tests verify comprehensive error handling scenarios including
+   * network errors, validation errors, and user feedback.
+   */
+  describe('Error Handling', () => {
+    /**
+     * Test: Error state management
+     * Verifies that handleError method properly sets error messages
+     */
+    it('should handle errors and set error messages', () => {
+      // Arrange: Spy on console.error to verify logging
+      spyOn(console, 'error');
+      const errorMessage = 'Test error message';
+      const mockError = new Error('Mock error');
+
+      // Act: Handle an error
+      component['handleError'](errorMessage, mockError);
+
+      // Assert: Verify error handling
+      expect(component.errorMessage()).toBe(errorMessage);
+      expect(console.error).toHaveBeenCalledWith('Dashboard error:', mockError);
+    });
+
+    /**
+     * Test: Loading state clears errors
+     * Verifies that setting loading state clears previous error messages
+     */
+    it('should clear error message when setting loading state', () => {
+      // Arrange: Set an error message
+      component.errorMessage.set('Previous error');
+
+      // Act: Set loading state to true
+      component['setLoadingState'](true);
+
+      // Assert: Verify error is cleared and loading is set
+      expect(component.errorMessage()).toBe('');
+      expect(component.isLoading()).toBeTruthy();
+    });
+
+    /**
+     * Test: Update submission error handling
+     * Verifies that update errors are handled gracefully with user feedback
+     */
+    it('should handle update submission errors', () => {
+      // Arrange: Mock service to return error and spy on alert
+      spyOn(window, 'alert');
+      spyOn(console, 'error');
+      mockService.updateSubmission.and.returnValue(throwError(() => new Error('Update failed')));
+
+      // Set up edit state
+      component.editingId.set(1);
+      component.editText.set('Valid updated text here');
+
+      // Act: Attempt to save edit
+      component.saveEdit(1);
+
+      // Assert: Verify error handling
+      expect(window.alert).toHaveBeenCalledWith('Failed to update submission. Please try again.');
+      expect(console.error).toHaveBeenCalledWith('Error updating submission:', jasmine.any(Error));
+    });
+
+    /**
+     * Test: Delete submission error handling
+     * Verifies that delete errors are handled gracefully with user feedback
+     */
+    it('should handle delete submission errors', () => {
+      // Arrange: Mock service to return error and spy on alert/confirm
+      spyOn(window, 'alert');
+      spyOn(window, 'confirm').and.returnValue(true);
+      spyOn(console, 'error');
+      mockService.deleteSubmission.and.returnValue(throwError(() => new Error('Delete failed')));
+
+      // Act: Attempt to delete submission
+      component.deleteSubmission(1, 'Test submission');
+
+      // Assert: Verify error handling
+      expect(window.alert).toHaveBeenCalledWith('Failed to delete submission. Please try again.');
+      expect(console.error).toHaveBeenCalledWith('Error deleting submission:', jasmine.any(Error));
+    });
+  });
+
+  /**
+   * Test Group: Data Manipulation
+   *
+   * These tests verify the internal data manipulation methods that update
+   * the submissions list without requiring server calls.
+   */
+  describe('Data Manipulation', () => {
+    /**
+     * Test: Update submission in list
+     * Verifies that updateSubmissionInList correctly updates a specific submission
+     */
+    it('should update submission in list correctly', () => {
+      // Arrange: Set up initial submissions
+      const initialSubmissions = [
+        { id: 1, text: 'First submission', createdAt: '2025-09-20T10:30:00.000Z' },
+        { id: 2, text: 'Second submission', createdAt: '2025-09-20T11:30:00.000Z' },
+        { id: 3, text: 'Third submission', createdAt: '2025-09-20T12:30:00.000Z' }
+      ];
+      component.submissions.set(initialSubmissions);
+
+      const updatedSubmission = { id: 2, text: 'Updated second submission', createdAt: '2025-09-20T11:30:00.000Z' };
+
+      // Act: Update submission in list
+      component['updateSubmissionInList'](2, updatedSubmission);
+
+      // Assert: Verify the specific submission was updated
+      const submissions = component.submissions();
+      expect(submissions.length).toBe(3);
+      expect(submissions[0].text).toBe('First submission'); // Unchanged
+      expect(submissions[1].text).toBe('Updated second submission'); // Updated
+      expect(submissions[2].text).toBe('Third submission'); // Unchanged
+    });
+
+    /**
+     * Test: Remove submission from list
+     * Verifies that removeSubmissionFromList correctly removes a specific submission
+     */
+    it('should remove submission from list correctly', () => {
+      // Arrange: Set up initial submissions
+      const initialSubmissions = [
+        { id: 1, text: 'First submission', createdAt: '2025-09-20T10:30:00.000Z' },
+        { id: 2, text: 'Second submission', createdAt: '2025-09-20T11:30:00.000Z' },
+        { id: 3, text: 'Third submission', createdAt: '2025-09-20T12:30:00.000Z' }
+      ];
+      component.submissions.set(initialSubmissions);
+
+      // Act: Remove submission from list
+      component['removeSubmissionFromList'](2);
+
+      // Assert: Verify the specific submission was removed
+      const submissions = component.submissions();
+      expect(submissions.length).toBe(2);
+      expect(submissions.find(s => s.id === 2)).toBeUndefined();
+      expect(submissions.find(s => s.id === 1)).toBeDefined();
+      expect(submissions.find(s => s.id === 3)).toBeDefined();
+    });
+  });
+
+  /**
+   * Test Group: User Interactions
+   *
+   * These tests verify user interaction scenarios including confirmations,
+   * validation feedback, and edge cases in user workflows.
+   */
+  describe('User Interactions', () => {
+    /**
+     * Test: Delete confirmation dialog
+     * Verifies that delete operations require user confirmation
+     */
+    it('should require confirmation before deleting', () => {
+      // Arrange: Mock confirm dialog
+      spyOn(window, 'confirm').and.returnValue(false); // User cancels
+      mockService.deleteSubmission.and.returnValue(of(undefined));
+
+      // Act: Attempt to delete submission
+      component.deleteSubmission(1, 'Test submission');
+
+      // Assert: Verify confirmation was requested and service not called
+      expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this submission?\n\n"Test submission"');
+      expect(mockService.deleteSubmission).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test: Save edit with invalid text length
+     * Verifies that invalid text length shows appropriate user feedback
+     */
+    it('should show alert for invalid text length during save', () => {
+      // Arrange: Set up edit state with invalid text
+      spyOn(window, 'alert');
+      component.editingId.set(1);
+      component.editText.set('Short'); // Too short (5 characters)
+
+      // Act: Attempt to save edit
+      component.saveEdit(1);
+
+      // Assert: Verify validation alert and no service call
+      expect(window.alert).toHaveBeenCalledWith('Text must be between 10 and 50 characters.');
+      expect(mockService.updateSubmission).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Test: Successful save edit workflow
+     * Verifies the complete successful edit workflow
+     */
+    it('should complete successful save edit workflow', () => {
+      // Arrange: Set up successful update scenario
+      const updatedSubmission = { id: 1, text: 'Valid updated text here', createdAt: '2025-09-20T10:30:00.000Z' };
+      mockService.updateSubmission.and.returnValue(of(updatedSubmission));
+
+      // Set up initial submissions and edit state
+      component.submissions.set([
+        { id: 1, text: 'Original text', createdAt: '2025-09-20T10:30:00.000Z' }
+      ]);
+      component.editingId.set(1);
+      component.editText.set('Valid updated text here');
+
+      // Act: Save the edit
+      component.saveEdit(1);
+
+      // Assert: Verify the complete workflow
+      expect(mockService.updateSubmission).toHaveBeenCalledWith(1, { text: 'Valid updated text here' });
+      expect(component.submissions()[0].text).toBe('Valid updated text here');
+      expect(component.editingId()).toBeNull(); // Edit state reset
+      expect(component.editText()).toBe(''); // Edit state reset
+    });
+
+    /**
+     * Test: Successful delete workflow
+     * Verifies the complete successful delete workflow
+     */
+    it('should complete successful delete workflow', () => {
+      // Arrange: Set up successful delete scenario
+      spyOn(window, 'confirm').and.returnValue(true); // User confirms
+      mockService.deleteSubmission.and.returnValue(of(undefined));
+
+      // Set up initial submissions
+      component.submissions.set([
+        { id: 1, text: 'To be deleted', createdAt: '2025-09-20T10:30:00.000Z' },
+        { id: 2, text: 'To remain', createdAt: '2025-09-20T11:30:00.000Z' }
+      ]);
+
+      // Act: Delete the submission
+      component.deleteSubmission(1, 'To be deleted');
+
+      // Assert: Verify the complete workflow
+      expect(window.confirm).toHaveBeenCalled();
+      expect(mockService.deleteSubmission).toHaveBeenCalledWith(1);
+      expect(component.submissions().length).toBe(1);
+      expect(component.submissions()[0].id).toBe(2);
+    });
   });
 });
