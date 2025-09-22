@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { tap, catchError } from 'rxjs/operators';
 
 // API Configuration
 const API_CONFIG = {
@@ -38,17 +37,7 @@ export class TextSubmissionService {
    * Get all text submissions
    */
   getSubmissions(): Observable<TextSubmissionModel[]> {
-    console.log('Service: Making GET request to:', this.apiUrl);
-    return this.http.get<TextSubmissionModel[]>(this.apiUrl).pipe(
-      tap(response => console.log('Service: GET response received:', response)),
-      catchError(error => {
-        console.error('Service: GET request failed:', error);
-        console.error('Service: Error status:', error.status);
-        console.error('Service: Error message:', error.message);
-        console.error('Service: Full error object:', error);
-        throw error;
-      })
-    );
+    return this.http.get<TextSubmissionModel[]>(this.apiUrl);
   }
 
   /**
