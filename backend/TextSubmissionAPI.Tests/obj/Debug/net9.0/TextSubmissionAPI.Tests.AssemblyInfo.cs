@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TextSubmissionAPI.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+34d88da4e516ed423261fd942c3e77d94e61ba69")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+89a9ad99197c653f8394a043ac7ad40d0fb1610d")]
 [assembly: System.Reflection.AssemblyProductAttribute("TextSubmissionAPI.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TextSubmissionAPI.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
