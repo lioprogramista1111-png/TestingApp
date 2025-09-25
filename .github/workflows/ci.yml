@@ -306,3 +306,177 @@ jobs:
         # $GITHUB_STEP_SUMMARY is a special GitHub Actions variable
         # Content written to this file appears in the Actions UI as a summary
         # ${{ needs.job-name.result }} contains the outcome: success, failure, cancelled, skipped
+
+  # =============================================================================
+  # JOB 5: CONTINUOUS DEPLOYMENT (CD)
+  # =============================================================================
+  # This job deploys the application to staging environment after successful CI
+  # Only runs on main branch pushes (not PRs) and when all tests pass
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests, build-verification]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && success()
+    # Conditions explained:
+    # - github.ref == 'refs/heads/main': Only deploy from main branch
+    # - github.event_name == 'push': Only on direct pushes (not PRs)
+    # - success(): Only if all previous jobs succeeded
+
+    environment:
+      name: staging
+      url: https://your-app-staging.azurewebsites.net
+    # Environment protection rules can be set in GitHub Settings
+    # This creates a deployment record visible in GitHub UI
+
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: GET THE CODE AND ARTIFACTS
+      # -------------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download the build artifacts created in build-verification job
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./frontend-dist
+
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./backend-dist
+
+      # -------------------------------------------------------------------------
+      # STEP 2: DEPLOY FRONTEND TO AZURE STATIC WEB APPS
+      # -------------------------------------------------------------------------
+      - name: Deploy Frontend to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "./frontend-dist"
+          skip_app_build: true
+        # This deploys the Angular app to Azure Static Web Apps
+        # Requires AZURE_STATIC_WEB_APPS_API_TOKEN secret in GitHub Settings
+
+      # -------------------------------------------------------------------------
+      # STEP 3: DEPLOY BACKEND TO AZURE APP SERVICE
+      # -------------------------------------------------------------------------
+      - name: Deploy Backend to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'your-textsubmission-api-staging'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: './backend-dist'
+        # This deploys the .NET API to Azure App Service
+        # Requires AZURE_WEBAPP_PUBLISH_PROFILE secret in GitHub Settings
+
+      # -------------------------------------------------------------------------
+      # STEP 4: RUN SMOKE TESTS AGAINST STAGING
+      # -------------------------------------------------------------------------
+      - name: Run smoke tests against staging
+        run: |
+          echo "🔍 Running smoke tests against staging environment..."
+
+          # Test backend API health
+          curl -f https://your-textsubmission-api-staging.azurewebsites.net/health || exit 1
+          echo "✅ Backend health check passed"
+
+          # Test frontend availability
+          curl -f https://your-app-staging.azurewebsites.net || exit 1
+          echo "✅ Frontend availability check passed"
+
+          # Test API endpoints
+          curl -f https://your-textsubmission-api-staging.azurewebsites.net/api/TextSubmission || exit 1
+          echo "✅ API endpoint check passed"
+
+          echo "🎉 All smoke tests passed! Staging deployment successful."
+        # These basic tests verify the deployment is working
+        # If any test fails, the deployment is marked as failed
+
+  # =============================================================================
+  # JOB 6: PRODUCTION DEPLOYMENT (MANUAL APPROVAL)
+  # =============================================================================
+  # This job deploys to production only with manual approval
+  # Requires staging deployment to succeed first
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [deploy-staging]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && success()
+
+    environment:
+      name: production
+      url: https://your-app.azurewebsites.net
+    # Production environment should have protection rules:
+    # - Required reviewers (team leads, DevOps engineers)
+    # - Wait timer (optional delay before deployment)
+    # - Deployment branches (only main branch)
+
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: GET ARTIFACTS FROM STAGING DEPLOYMENT
+      # -------------------------------------------------------------------------
+      - name: Download frontend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: ./frontend-dist
+
+      - name: Download backend artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-build
+          path: ./backend-dist
+
+      # -------------------------------------------------------------------------
+      # STEP 2: DEPLOY TO PRODUCTION ENVIRONMENTS
+      # -------------------------------------------------------------------------
+      - name: Deploy Frontend to Production
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_PROD }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "./frontend-dist"
+          skip_app_build: true
+
+      - name: Deploy Backend to Production
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'your-textsubmission-api-prod'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_PROD }}
+          package: './backend-dist'
+
+      # -------------------------------------------------------------------------
+      # STEP 3: PRODUCTION SMOKE TESTS
+      # -------------------------------------------------------------------------
+      - name: Run production smoke tests
+        run: |
+          echo "🔍 Running production smoke tests..."
+
+          # Wait for deployment to propagate
+          sleep 30
+
+          # Test production endpoints
+          curl -f https://your-app.azurewebsites.net || exit 1
+          curl -f https://your-textsubmission-api-prod.azurewebsites.net/health || exit 1
+          curl -f https://your-textsubmission-api-prod.azurewebsites.net/api/TextSubmission || exit 1
+
+          echo "🎉 Production deployment successful!"
+
+      # -------------------------------------------------------------------------
+      # STEP 4: NOTIFY TEAM OF SUCCESSFUL DEPLOYMENT
+      # -------------------------------------------------------------------------
+      - name: Notify deployment success
+        run: |
+          echo "## 🚀 Production Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Frontend URL**: https://your-app.azurewebsites.net" >> $GITHUB_STEP_SUMMARY
+          echo "**Backend API**: https://your-textsubmission-api-prod.azurewebsites.net" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Time**: $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All systems operational" >> $GITHUB_STEP_SUMMARY

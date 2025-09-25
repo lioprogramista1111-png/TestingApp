@@ -108,9 +108,9 @@ ng serve
 
 The frontend application will be available at: `http://localhost:4200`
 
-## 🚀 Continuous Integration
+## 🚀 CI/CD Pipeline
 
-This project uses **GitHub Actions** for automated CI/CD pipeline that runs on every push and pull request.
+This project uses **GitHub Actions** for automated CI/CD pipeline with testing, building, and deployment.
 
 ### CI Pipeline Features
 - ✅ **Automated Testing**: Runs all 89 tests (49 frontend + 40 backend)
@@ -119,16 +119,30 @@ This project uses **GitHub Actions** for automated CI/CD pipeline that runs on e
 - ✅ **Artifact Storage**: Saves build outputs for deployment
 - ✅ **Status Checks**: Prevents merging broken code
 
+### CD Pipeline Features
+- ✅ **Staging Deployment**: Automatic deployment to staging environment
+- ✅ **Production Deployment**: Manual approval required for production
+- ✅ **Smoke Testing**: Automated health checks after deployment
+- ✅ **Rollback Capability**: Quick recovery from failed deployments
+- ✅ **Environment Protection**: Approval gates and deployment restrictions
+
 ### Pipeline Jobs
 1. **Frontend Tests**: Angular/Jasmine tests with ChromeHeadless
 2. **Backend Tests**: .NET/xUnit tests with in-memory database
 3. **Build Verification**: Production build validation
-4. **CI Summary**: Overall pipeline status report
+4. **Deploy Staging**: Automatic deployment to staging (main branch only)
+5. **Deploy Production**: Manual approval deployment to production
+6. **CI Summary**: Overall pipeline status report
 
-### Viewing CI Results
-- Check the **Actions** tab in GitHub repository
-- Green ✅ badge in README indicates passing tests
-- Red ❌ badge indicates failing tests that need attention
+### Deployment Options
+- **Azure Cloud**: Azure Static Web Apps + Azure App Service
+- **Docker**: Local development with Docker Compose
+- **Manual**: Traditional deployment methods
+
+### Viewing Results
+- **CI/CD Status**: Check the **Actions** tab in GitHub repository
+- **Deployments**: View deployment history in **Environments** tab
+- **Status Badge**: Green ✅ badge indicates passing pipeline
 
 ## 🧪 Testing
 

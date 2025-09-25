@@ -1,0 +1,109 @@
+# =============================================================================
+# DOCKER COMPOSE CONFIGURATION FOR TEXTSUBMISSIONAPI
+# =============================================================================
+# This file defines the complete application stack for local development
+# and deployment using Docker containers
+
+version: '3.8'
+
+# =============================================================================
+# SERVICES DEFINITION
+# =============================================================================
+services:
+  # ---------------------------------------------------------------------------
+  # FRONTEND SERVICE (Angular Application)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend/text-submission-app
+      dockerfile: Dockerfile
+    container_name: textsubmission-frontend
+    ports:
+      - "4200:80"  # Map host port 4200 to container port 80
+    environment:
+      - NODE_ENV=production
+      - API_BASE_URL=http://localhost:5000  # Backend API URL
+    depends_on:
+      - backend  # Wait for backend to start first
+    networks:
+      - textsubmission-network
+    restart: unless-stopped
+    # Health check to ensure frontend is responding
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ---------------------------------------------------------------------------
+  # BACKEND SERVICE (.NET API)
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: textsubmission-backend
+    ports:
+      - "5000:80"  # Map host port 5000 to container port 80
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Server=database;Database=TextSubmissionDB;User Id=sa;Password=YourPassword123!;TrustServerCertificate=true;
+    depends_on:
+      database:
+        condition: service_healthy  # Wait for database to be healthy
+    networks:
+      - textsubmission-network
+    restart: unless-stopped
+    # Health check to ensure API is responding
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # DATABASE SERVICE (SQL Server)
+  # ---------------------------------------------------------------------------
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: textsubmission-database
+    ports:
+      - "1433:1433"  # Map host port 1433 to container port 1433
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourPassword123!
+      - MSSQL_PID=Express  # Use SQL Server Express edition
+    volumes:
+      - sqlserver_data:/var/opt/mssql  # Persist database data
+      - ./database/init:/docker-entrypoint-initdb.d  # Initialization scripts
+    networks:
+      - textsubmission-network
+    restart: unless-stopped
+    # Health check to ensure SQL Server is ready
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourPassword123! -Q 'SELECT 1'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+# =============================================================================
+# VOLUMES DEFINITION
+# =============================================================================
+volumes:
+  # Persistent storage for SQL Server data
+  sqlserver_data:
+    driver: local
+    # This ensures database data survives container restarts
+
+# =============================================================================
+# NETWORKS DEFINITION
+# =============================================================================
+networks:
+  # Custom network for service communication
+  textsubmission-network:
+    driver: bridge
+    # This allows containers to communicate using service names
