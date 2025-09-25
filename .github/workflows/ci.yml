@@ -1,0 +1,308 @@
+# =============================================================================
+# CI PIPELINE CONFIGURATION
+# =============================================================================
+# This file defines a GitHub Actions workflow that automatically runs tests
+# and builds the application whenever code is pushed or pull requests are created.
+
+name: CI Pipeline  # The name that appears in the GitHub Actions tab
+
+# =============================================================================
+# WORKFLOW TRIGGERS - When this CI pipeline runs
+# =============================================================================
+on:
+  # Trigger 1: Run CI when code is pushed to main or develop branches
+  push:
+    branches: [main, develop]  # Only these branches trigger CI on push
+
+  # Trigger 2: Run CI when a pull request is opened/updated targeting main
+  pull_request:
+    branches: [main]  # Only PRs targeting main branch trigger CI
+
+  # Trigger 3: Allow manual triggering from GitHub Actions UI
+  workflow_dispatch:  # Adds a "Run workflow" button in GitHub Actions
+
+# =============================================================================
+# JOBS DEFINITION - The actual work that CI performs
+# =============================================================================
+# Jobs run in parallel by default, making CI faster
+# Each job runs on a separate virtual machine (runner)
+
+jobs:
+  # =============================================================================
+  # JOB 1: FRONTEND TESTING
+  # =============================================================================
+  # This job tests the Angular frontend application
+  frontend-tests:
+    name: Frontend Tests (Angular)  # Human-readable name shown in GitHub UI
+    runs-on: ubuntu-latest          # Virtual machine OS (Ubuntu Linux latest version)
+
+    # Set default working directory for all steps in this job
+    defaults:
+      run:
+        working-directory: ./frontend/text-submission-app  # All commands run from this folder
+    
+    # Steps are executed sequentially within this job
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: GET THE CODE
+      # -------------------------------------------------------------------------
+      # Downloads the repository code to the virtual machine
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Pre-built action from GitHub marketplace
+        # This step downloads all files from your repository to the runner
+        # @v4 is the version of the checkout action (latest stable)
+
+      # -------------------------------------------------------------------------
+      # STEP 2: SETUP NODE.JS ENVIRONMENT
+      # -------------------------------------------------------------------------
+      # Installs Node.js and npm on the virtual machine
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4  # Pre-built action for Node.js setup
+        with:
+          node-version: '18'         # Install Node.js version 18 (LTS)
+          cache: 'npm'               # Cache npm dependencies for faster builds
+          cache-dependency-path: './frontend/text-submission-app/package-lock.json'  # Path to lock file for cache key
+
+      # -------------------------------------------------------------------------
+      # STEP 3: INSTALL DEPENDENCIES
+      # -------------------------------------------------------------------------
+      # Installs all npm packages needed for the Angular application
+      - name: Install dependencies
+        run: npm ci  # 'npm ci' is faster than 'npm install' and uses package-lock.json exactly
+        # This installs all packages listed in package.json with exact versions from package-lock.json
+
+      # -------------------------------------------------------------------------
+      # STEP 4: RUN UNIT TESTS
+      # -------------------------------------------------------------------------
+      # Executes all Angular unit tests using Jasmine and Karma
+      - name: Run Angular tests
+        run: npm run test:ci  # Runs: ng test --watch=false --browsers=ChromeHeadless
+        # This command runs all 49 frontend tests in headless Chrome browser
+        # --watch=false: Run tests once and exit (don't watch for file changes)
+        # --browsers=ChromeHeadless: Use Chrome without GUI (perfect for CI)
+      
+      # -------------------------------------------------------------------------
+      # STEP 5: UPLOAD TEST RESULTS
+      # -------------------------------------------------------------------------
+      # Uploads test results to GitHub for easy viewing, even if tests fail
+      - name: Upload test results
+        uses: dorny/test-reporter@v1  # Third-party action for test result reporting
+        if: always()  # Run this step even if previous steps failed
+        with:
+          name: Frontend Test Results           # Name shown in GitHub UI
+          path: './frontend/text-submission-app/test-results.xml'  # Path to test results file
+          reporter: jest-junit                  # Format of test results (Jest/Jasmine compatible)
+          fail-on-error: true                  # Mark the job as failed if tests failed
+        # This step creates a nice test report in GitHub that shows:
+        # - Which tests passed/failed
+        # - Test execution time
+        # - Error messages for failed tests
+
+  # =============================================================================
+  # JOB 2: BACKEND TESTING
+  # =============================================================================
+  # This job tests the .NET Core backend API
+  # Runs in parallel with frontend-tests job for faster CI
+  backend-tests:
+    name: Backend Tests (.NET)  # Human-readable name shown in GitHub UI
+    runs-on: ubuntu-latest      # Virtual machine OS (same as frontend for consistency)
+
+    # Set default working directory for all steps in this job
+    defaults:
+      run:
+        working-directory: ./backend  # All commands run from the backend folder
+    
+    # Steps are executed sequentially within this job
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: GET THE CODE
+      # -------------------------------------------------------------------------
+      # Downloads the repository code to the virtual machine (same as frontend job)
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Same action as frontend, gets all repository files
+
+      # -------------------------------------------------------------------------
+      # STEP 2: SETUP .NET ENVIRONMENT
+      # -------------------------------------------------------------------------
+      # Installs .NET SDK on the virtual machine
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4  # Pre-built action for .NET setup
+        with:
+          dotnet-version: '9.0.x'      # Install .NET 9 (latest patch version)
+        # This installs the .NET SDK which includes:
+        # - dotnet CLI commands
+        # - Runtime for running .NET applications
+        # - Compiler for building .NET projects
+
+      # -------------------------------------------------------------------------
+      # STEP 3: RESTORE DEPENDENCIES
+      # -------------------------------------------------------------------------
+      # Downloads all NuGet packages needed for the .NET application
+      - name: Restore dependencies
+        run: dotnet restore  # Downloads packages listed in .csproj files
+        # This command:
+        # - Reads TextSubmissionAPI.csproj and TextSubmissionAPI.Tests.csproj
+        # - Downloads all referenced NuGet packages
+        # - Creates obj/ folders with project metadata
+
+      # -------------------------------------------------------------------------
+      # STEP 4: BUILD THE APPLICATION
+      # -------------------------------------------------------------------------
+      # Compiles the .NET source code into executable assemblies
+      - name: Build application
+        run: dotnet build --no-restore --configuration Release
+        # --no-restore: Skip package restore (already done in previous step)
+        # --configuration Release: Build optimized version (not Debug)
+        # This creates .dll files in bin/Release/ folders
+
+      # -------------------------------------------------------------------------
+      # STEP 5: RUN UNIT TESTS
+      # -------------------------------------------------------------------------
+      # Executes all .NET unit tests using xUnit framework
+      - name: Run .NET tests
+        run: dotnet test TextSubmissionAPI.Tests --no-build --configuration Release --logger trx --results-directory TestResults
+        # TextSubmissionAPI.Tests: The test project to run (40 tests total)
+        # --no-build: Use already compiled assemblies from previous step
+        # --configuration Release: Use Release build artifacts
+        # --logger trx: Generate test results in TRX format (XML-based)
+        # --results-directory TestResults: Save test results to TestResults/ folder
+      
+      # -------------------------------------------------------------------------
+      # STEP 6: UPLOAD TEST RESULTS
+      # -------------------------------------------------------------------------
+      # Uploads .NET test results to GitHub for easy viewing
+      - name: Upload test results
+        uses: dorny/test-reporter@v1  # Same action as frontend, but for .NET results
+        if: always()  # Run even if tests failed (we want to see what failed)
+        with:
+          name: Backend Test Results        # Name shown in GitHub UI
+          path: './backend/TestResults/*.trx'  # Path to TRX files (XML test results)
+          reporter: dotnet-trx              # Parser for .NET TRX format
+          fail-on-error: true              # Mark job as failed if any tests failed
+        # This creates a detailed test report showing:
+        # - All 40 backend tests (18 controller + 22 model tests)
+        # - Pass/fail status for each test
+        # - Execution time and error details
+
+  # =============================================================================
+  # JOB 3: BUILD VERIFICATION
+  # =============================================================================
+  # This job only runs if both frontend and backend tests pass
+  # It verifies that the application can be built for production deployment
+  build-verification:
+    name: Build Verification     # Human-readable name shown in GitHub UI
+    runs-on: ubuntu-latest       # Virtual machine OS
+    needs: [frontend-tests, backend-tests]  # Wait for both test jobs to complete
+    if: success()                # Only run if both test jobs succeeded
+    # This job dependency ensures we don't waste time building if tests fail
+    
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: GET THE CODE
+      # -------------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Download repository files again (fresh VM)
+
+      # -------------------------------------------------------------------------
+      # STEP 2: SETUP NODE.JS FOR FRONTEND BUILD
+      # -------------------------------------------------------------------------
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4  # Install Node.js (same as frontend-tests job)
+        with:
+          node-version: '18'         # Same version as used in testing
+          cache: 'npm'               # Reuse cached dependencies if available
+          cache-dependency-path: './frontend/text-submission-app/package-lock.json'
+
+      # -------------------------------------------------------------------------
+      # STEP 3: BUILD FRONTEND FOR PRODUCTION
+      # -------------------------------------------------------------------------
+      - name: Build frontend
+        run: |
+          cd frontend/text-submission-app  # Navigate to frontend directory
+          npm ci                           # Install exact dependencies from lock file
+          npm run build                    # Run: ng build (creates dist/ folder)
+        # This creates optimized, minified files ready for production deployment
+        # Output goes to: frontend/text-submission-app/dist/
+      
+      # -------------------------------------------------------------------------
+      # STEP 4: SETUP .NET FOR BACKEND BUILD
+      # -------------------------------------------------------------------------
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4  # Install .NET SDK (same as backend-tests job)
+        with:
+          dotnet-version: '9.0.x'      # Same version as used in testing
+
+      # -------------------------------------------------------------------------
+      # STEP 5: BUILD BACKEND FOR PRODUCTION
+      # -------------------------------------------------------------------------
+      - name: Build backend
+        run: |
+          cd backend                                                    # Navigate to backend directory
+          dotnet restore                                               # Download NuGet packages
+          dotnet build --configuration Release                         # Compile in Release mode (optimized)
+          dotnet publish TextSubmissionAPI --configuration Release --output ./publish
+        # dotnet publish creates a self-contained deployment package:
+        # - Includes all dependencies
+        # - Ready to deploy to any server
+        # - Output goes to: backend/publish/
+      
+      # -------------------------------------------------------------------------
+      # STEP 6: UPLOAD BUILD ARTIFACTS
+      # -------------------------------------------------------------------------
+      # Save build outputs so they can be downloaded or used for deployment
+      - name: Upload frontend build artifacts
+        uses: actions/upload-artifact@v4  # GitHub action for storing files
+        with:
+          name: frontend-build                              # Artifact name in GitHub UI
+          path: ./frontend/text-submission-app/dist/       # Folder containing built files
+          retention-days: 7                                # Keep artifacts for 7 days
+        # This saves the compiled Angular app (HTML, CSS, JS files)
+        # Can be downloaded from GitHub Actions UI or used by deployment jobs
+
+      - name: Upload backend build artifacts
+        uses: actions/upload-artifact@v4  # Same action for backend files
+        with:
+          name: backend-build               # Artifact name in GitHub UI
+          path: ./backend/publish/          # Folder containing published .NET app
+          retention-days: 7                 # Keep artifacts for 7 days
+        # This saves the compiled .NET app with all dependencies
+        # Ready to deploy to any server that supports .NET
+
+  # =============================================================================
+  # JOB 4: CI SUMMARY
+  # =============================================================================
+  # This job always runs (even if other jobs fail) to provide overall status
+  # It creates a summary report visible in GitHub Actions UI
+  ci-summary:
+    name: CI Summary              # Human-readable name shown in GitHub UI
+    runs-on: ubuntu-latest        # Virtual machine OS
+    needs: [frontend-tests, backend-tests, build-verification]  # Wait for all other jobs
+    if: always()                  # Run regardless of other job outcomes
+    # This ensures we always get a summary, even if some jobs fail
+    
+    steps:
+      # -------------------------------------------------------------------------
+      # STEP 1: CREATE CI RESULTS SUMMARY
+      # -------------------------------------------------------------------------
+      # Generates a markdown summary visible in GitHub Actions UI
+      - name: CI Results Summary
+        run: |
+          # Create a markdown table showing the status of each job
+          echo "## 📊 CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Tests | ${{ needs.frontend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Tests | ${{ needs.backend-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Verification | ${{ needs.build-verification.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Add overall status message based on test results
+          if [[ "${{ needs.frontend-tests.result }}" == "success" && "${{ needs.backend-tests.result }}" == "success" ]]; then
+            echo "✅ **All tests passed!** Ready for deployment." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Some tests failed.** Please check the logs above." >> $GITHUB_STEP_SUMMARY
+          fi
+        # $GITHUB_STEP_SUMMARY is a special GitHub Actions variable
+        # Content written to this file appears in the Actions UI as a summary
+        # ${{ needs.job-name.result }} contains the outcome: success, failure, cancelled, skipped

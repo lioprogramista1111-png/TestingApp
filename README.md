@@ -1,5 +1,7 @@
 # Text Submission Full-Stack Application
 
+[![CI Pipeline](https://github.com/lioprogramista1111-png/TestingApp/actions/workflows/ci.yml/badge.svg)](https://github.com/lioprogramista1111-png/TestingApp/actions/workflows/ci.yml)
+
 A full-stack web application built with Angular frontend, .NET Core backend, and SQL Server database for submitting and storing text data.
 
 ## Project Structure
@@ -106,9 +108,31 @@ ng serve
 
 The frontend application will be available at: `http://localhost:4200`
 
+## 🚀 Continuous Integration
+
+This project uses **GitHub Actions** for automated CI/CD pipeline that runs on every push and pull request.
+
+### CI Pipeline Features
+- ✅ **Automated Testing**: Runs all 89 tests (49 frontend + 40 backend)
+- ✅ **Parallel Execution**: Frontend and backend tests run simultaneously
+- ✅ **Build Verification**: Ensures production builds work correctly
+- ✅ **Artifact Storage**: Saves build outputs for deployment
+- ✅ **Status Checks**: Prevents merging broken code
+
+### Pipeline Jobs
+1. **Frontend Tests**: Angular/Jasmine tests with ChromeHeadless
+2. **Backend Tests**: .NET/xUnit tests with in-memory database
+3. **Build Verification**: Production build validation
+4. **CI Summary**: Overall pipeline status report
+
+### Viewing CI Results
+- Check the **Actions** tab in GitHub repository
+- Green ✅ badge in README indicates passing tests
+- Red ❌ badge indicates failing tests that need attention
+
 ## 🧪 Testing
 
-This project includes a comprehensive testing suite with **100% code coverage** for the frontend.
+This project includes a comprehensive testing suite with **89 total tests** providing excellent coverage.
 
 ### Frontend Testing
 
